@@ -1,0 +1,36 @@
+{
+  "name": "faasstatemachinevisualizer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/autocomplete.js",
+  "bin": {
+    "aws-smv": "src/cli.js",
+    "mds-smv": "src/cli.js"
+  },
+  "scripts": {
+    "start": "node ./src/index.js",
+    "test": "NODE_ENV=test mocha",
+    "test-cov": "NODE_ENV=test nyc mocha",
+    "lint": "eslint 'src/**'"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "yargs": "^15.3.1"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.1.0",
+    "eslint-plugin-import": "^2.20.1",
+    "mocha": "^7.1.1",
+    "nyc": "^15.0.0",
+    "sinon": "^9.0.1",
+    "sinon-chai": "^3.5.0"
+  },
+  "optionalDependencies": {
+    "axios": "^0.19.2",
+    "clipboardy": "^2.3.0",
+    "puppeteer": "^2.1.1"
+  }
+}
