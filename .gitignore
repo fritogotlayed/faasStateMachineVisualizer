@@ -5,3 +5,7 @@ coverage/
 
 # VSCode
 .vscode/
+
+# Dependencies
+site/fontawesome/
+site/mermaid.min.js

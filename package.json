@@ -8,14 +8,19 @@
     "mds-smv": "src/cli.js"
   },
   "scripts": {
+    "build": "./scripts/copy-dependencies.sh",
+    "lint": "eslint 'src/**'",
     "start": "node ./src/index.js",
     "test": "NODE_ENV=test mocha",
     "test-cov": "NODE_ENV=test nyc mocha",
-    "lint": "eslint 'src/**'"
+    "update": "ncu -u && npm run build"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@fortawesome/fontawesome-free-webfonts": "^1.0.9",
+    "mermaid": "^8.4.8",
+    "puppeteer": "^2.1.1",
     "yargs": "^15.3.1"
   },
   "devDependencies": {
@@ -24,13 +29,13 @@
     "eslint-config-airbnb-base": "^14.1.0",
     "eslint-plugin-import": "^2.20.1",
     "mocha": "^7.1.1",
+    "npm-check-updates": "^4.0.6",
     "nyc": "^15.0.0",
     "sinon": "^9.0.1",
     "sinon-chai": "^3.5.0"
   },
   "optionalDependencies": {
     "axios": "^0.19.2",
-    "clipboardy": "^2.3.0",
-    "puppeteer": "^2.1.1"
+    "clipboardy": "^2.3.0"
   }
 }

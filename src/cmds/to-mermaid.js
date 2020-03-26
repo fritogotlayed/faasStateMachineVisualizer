@@ -1,10 +1,10 @@
 const fs = require('fs');
 const util = require('util');
+const lib = require('../lib');
 
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 
-const INDENT = '    ';
 
 const generateOutputFileName = (input, suffix) => {
   let name = '';
@@ -18,41 +18,6 @@ const generateOutputFileName = (input, suffix) => {
   return name;
 };
 
-const generateOutputFileLines = (flow) => {
-  const lines = [];
-  lines.push('graph TD');
-  lines.push(`${INDENT}start([start]) --> ${flow.StartAt}`);
-
-  const stateKeys = Object.keys(flow.States);
-  for (let i = 0; i < stateKeys.length; i += 1) {
-    const key = stateKeys[i];
-    const state = flow.States[key];
-
-    // next
-    if (state.Next) {
-      lines.push(`${INDENT}${key} --> ${state.Next}`);
-    }
-
-    // choices
-    const choicesLength = state.Choices ? state.Choices.length : 0;
-    for (let j = 0; j < choicesLength; j += 1) {
-      lines.push(`${INDENT}${key} --> ${state.Choices[j].Next}`);
-    }
-
-    // catch
-    const catchLength = state.Catch ? state.Catch.length : 0;
-    for (let j = 0; j < catchLength; j += 1) {
-      lines.push(`${INDENT}${key} --> ${state.Catch[j].Next}`);
-    }
-
-    if (['Fail', 'Succeed'].indexOf(state.Type) > -1) {
-      lines.push(`${INDENT}${key}([${key}])`);
-    }
-  }
-
-  return lines;
-};
-
 const writeMermaidFile = async (lines, argv) => {
   let out = argv.output;
   if (!out) {
@@ -63,109 +28,13 @@ const writeMermaidFile = async (lines, argv) => {
   process.stdout.write(`Copy & paste your new mmd file (${out}) into https://mermaid-js.github.io/mermaid-live-editor/ to see your flow!\n`);
 };
 
-const pasteBodyIn = async (page, lines) => {
-  /* eslint-disable global-require */
-  /* eslint-disable import/no-extraneous-dependencies */
-  const clipboardy = require('clipboardy');
-  /* eslint-enable import/no-extraneous-dependencies */
-  /* eslint-enable global-require */
-
-  process.stdout.write('Generating image...\n');
-  const oldClip = await clipboardy.read();
-  await clipboardy.write(lines.join('\n'));
-  await page.keyboard.down('Control');
-  await page.keyboard.press('KeyV');
-  await page.keyboard.up('Control');
-  await page.keyboard.press('Enter');
-  await clipboardy.write(oldClip);
-};
-
-/**
- * 
- * @param {any} page
- * @param {string[]} lines
- */
-const writeBodyIn = async (page, lines) => {
-  const data = lines
-    .map((v, i) => (i === 1 ? v : v.replace(INDENT, '')))
-    .join('\n');
-  process.stdout.write('Generating image');
-  const handle = setInterval(() => {
-    process.stdout.write('.');
-  }, 1000);
-  await page.keyboard.type(data);
-  clearTimeout(handle);
-  process.stdout.write('\n');
-};
-
-const writeImageFile = async (lines, argv) => {
-  let out = argv.output;
-  if (!out) {
-    out = generateOutputFileName(argv.input, 'jpg');
-  }
-
-  /* eslint-disable global-require */
-  /* eslint-disable import/no-extraneous-dependencies */
-  const puppeteer = require('puppeteer');
-  const utils = require('../utils');
-  /* eslint-enable import/no-extraneous-dependencies */
-  /* eslint-enable global-require */
-
-  const rootMermaidUrl = 'https://mermaid-js.github.io';
-
-  process.stdout.write('Setting up to generate image...\n');
-  const browser = await puppeteer.launch({ headless: true, slowMo: 50 });
-  const pages = await browser.pages();
-  const page = pages[0];
-  await page.goto(`${rootMermaidUrl}/mermaid-live-editor`);
-  await page.click('#editor');
-  await page.keyboard.down('Control');
-  await page.keyboard.press('KeyA');
-  await page.keyboard.up('Control');
-  await page.keyboard.press('Backspace');
-
-  switch (argv.mode.toLowerCase()) {
-    case 'experimental':
-      await pasteBodyIn(page, lines); // doesn't work in headless
-      break;
-    default:
-      await writeBodyIn(page, lines); // works in headless
-      break;
-  }
-
-  process.stdout.write('Saving image...\n');
-  const downloadAnchor = await page.$('#links > a:nth-child(3)');
-  const href = await page.evaluate((anchor) => anchor.getAttribute('href'), downloadAnchor);
-  await utils.download(`${href}`, process.cwd(), out);
-  await page.close();
-  await browser.close();
-};
-
 const handle = async (argv) => {
   const { input } = argv;
 
   const body = await readFile(input, 'utf-8');
   const flow = JSON.parse(body);
-  const lines = generateOutputFileLines(flow);
-
-  const outputType = argv.outputType.toUpperCase();
-  switch (outputType) {
-    case 'IMG':
-      try {
-        await writeImageFile(lines, argv);
-      } catch (e) {
-        process.stdout.write('Writing image file failed. This may be due to a missing dependency or another issue. Falling back to using the mermaid file.');
-        await writeMermaidFile(lines, argv);
-      }
-      break;
-    default:
-      if (outputType !== 'MMD') {
-        process.stdout.write(`${outputType} not understood. Defaulting to mermaid file output.`);
-      }
-
-      await writeMermaidFile(lines, argv);
-      break;
-  }
+  const lines = lib.generateMermaidLines(flow);
+  await writeMermaidFile(lines, argv);
 };
 
 exports.command = 'to-mermaid <input>';
@@ -174,14 +43,6 @@ exports.builder = {
   output: {
     default: null,
     desc: 'Optional output file name',
-  },
-  outputType: {
-    default: 'mmd',
-    desc: 'Output format type. MMD - mermaid document, IMG - SVG format. Please note that using IMG format requires the optional dependency of puppeteer to be installed.',
-  },
-  mode: {
-    default: 'safe',
-    desc: 'Image generation method to use. "safe" or "experimental". WARNING: Experimental mode may generate the incorrect image.',
   },
 };
 exports.handler = (argv) => handle(argv);
