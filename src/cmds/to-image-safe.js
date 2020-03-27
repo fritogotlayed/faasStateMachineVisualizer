@@ -46,13 +46,13 @@ const pasteBodyIn = async (page, lines) => {
 };
 
 /**
- * 
+ *
  * @param {any} page
  * @param {string[]} lines
  */
 const writeBodyIn = async (page, lines) => {
   const data = lines
-    .map((v, i) => (i === 1 ? v : v.replace(INDENT, '')))
+    .map((v, i) => (i === 1 ? v : v.replace(lib.INDENT, '')))
     .join('\n');
   process.stdout.write('Generating image');
   const handle = setInterval(() => {
@@ -122,6 +122,7 @@ const handle = async (argv) => {
       try {
         await writeImageFile(lines, argv);
       } catch (e) {
+        console.dir(e);
         process.stdout.write('Writing image file failed. This may be due to a missing dependency or another issue. Falling back to using the mermaid file.');
         await writeMermaidFile(lines, argv);
       }

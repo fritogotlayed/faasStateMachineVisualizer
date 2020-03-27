@@ -17,14 +17,50 @@ const generateOutputFileName = (input, suffix) => {
   for (let i = 0; i < stopper; i += 1) {
     name += `${parts[i]}.`;
   }
-  name += suffix || 'png';
+  name += suffix || 'svg';
   return name;
+};
+
+const savePng = async (argv, page, out) => {
+  const clip = await page.$eval('svg', (svg) => {
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: rect.left,
+      y: rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+  });
+
+  await page.setViewport({
+    width: clip.x + clip.width,
+    height: clip.y + clip.height,
+    deviceScaleFactor: argv.scale,
+  });
+
+  await page.screenshot({
+    path: out,
+    clip,
+    omitBackground: argv.transparent,
+  });
+};
+
+const saveSvg = async (page, out) => {
+  const svg = await page.$eval('.mermaid', (container) => container.innerHTML);
+  await writeFile(out, svg);
+};
+
+const savePdf = async (argv, page, out) => {
+  await page.pdf({
+    path: out,
+    printBackground: !argv.transparent,
+  });
 };
 
 const writeImageFile = async (lines, argv) => {
   let out = argv.output;
   if (!out) {
-    out = generateOutputFileName(argv.input, 'png');
+    out = generateOutputFileName(argv.input, 'svg');
   }
 
   const template = await readFile(path.join(__dirname, '..', '..', 'site', 'index.html.template'), 'utf-8');
@@ -38,22 +74,20 @@ const writeImageFile = async (lines, argv) => {
   try {
     process.stdout.write('Saving image...\n');
     await page.goto(`file://${path.join(SITE_PATH, 'index.html')}`);
-
-    const clip = await page.$eval('svg', (svg) => {
-      const rect = svg.getBoundingClientRect();
-      return {
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
-      };
+    page.setViewport({
+      width: argv.width,
+      height: argv.height,
+      deviceScaleFactor: argv.scale,
     });
+    page.evaluate('document.body.style.background=\'white\'');
 
-    await page.screenshot({
-      path: path.join(process.cwd(), out),
-      clip,
-      omitBackground: argv.transparent,
-    });
+    if (out.endsWith('svg')) {
+      await saveSvg(page, out);
+    } else if (out.endsWith('png')) {
+      await savePng(argv, page, out);
+    } else { // pdf
+      await savePdf(argv, page, out);
+    }
   } finally {
     await browser.close();
     try {
@@ -85,6 +119,21 @@ exports.builder = {
     default: false,
     type: 'boolean',
     desc: 'Render the image with a transparent background or not',
+  },
+  width: {
+    default: 800,
+    type: 'number',
+    desc: 'The width of the device to use when rendering. Set this higher if you are experience clipping issues.',
+  },
+  height: {
+    default: 600,
+    type: 'number',
+    desc: 'The height of the device to use when rendering. Set this higher if you are experience clipping issues.',
+  },
+  scale: {
+    default: 1,
+    type: 'number',
+    desc: 'The scale to use when generating the image.',
   },
 };
 exports.handler = (argv) => handle(argv);
