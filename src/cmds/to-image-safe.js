@@ -18,16 +18,6 @@ const generateOutputFileName = (input, suffix) => {
   return name;
 };
 
-const writeMermaidFile = async (lines, argv) => {
-  let out = argv.output;
-  if (!out) {
-    out = generateOutputFileName(argv.input);
-  }
-
-  await writeFile(out, lines.join('\n'));
-  process.stdout.write(`Copy & paste your new mmd file (${out}) into https://mermaid-js.github.io/mermaid-live-editor/ to see your flow!\n`);
-};
-
 const pasteBodyIn = async (page, lines) => {
   /* eslint-disable global-require */
   /* eslint-disable import/no-extraneous-dependencies */
@@ -115,26 +105,7 @@ const handle = async (argv) => {
   const body = await readFile(input, 'utf-8');
   const flow = JSON.parse(body);
   const lines = lib.generateMermaidLines(flow);
-
-  const outputType = argv.outputType.toUpperCase();
-  switch (outputType) {
-    case 'IMG':
-      try {
-        await writeImageFile(lines, argv);
-      } catch (e) {
-        console.dir(e);
-        process.stdout.write('Writing image file failed. This may be due to a missing dependency or another issue. Falling back to using the mermaid file.');
-        await writeMermaidFile(lines, argv);
-      }
-      break;
-    default:
-      if (outputType !== 'MMD') {
-        process.stdout.write(`${outputType} not understood. Defaulting to mermaid file output.`);
-      }
-
-      await writeMermaidFile(lines, argv);
-      break;
-  }
+  await writeImageFile(lines, argv);
 };
 
 exports.command = 'to-image-safe <input>';
@@ -143,10 +114,6 @@ exports.builder = {
   output: {
     default: null,
     desc: 'Optional output file name',
-  },
-  outputType: {
-    default: 'mmd',
-    desc: 'Output format type. MMD - mermaid document, IMG - SVG format. Please note that using IMG format requires the optional dependency of puppeteer to be installed.',
   },
   mode: {
     default: 'safe',
