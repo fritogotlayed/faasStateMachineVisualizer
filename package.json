@@ -19,7 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free-webfonts": "^1.0.9",
-    "mermaid": "^8.4.8",
+    "mermaid": "^8.11.0",
     "puppeteer": "^2.1.1",
     "yargs": "^15.3.1"
   },
